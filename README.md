@@ -1,12 +1,13 @@
-- 👋 Hi, I’m @Nataliia-data-analyst
-- 👀 I’m interested in data analysis and digital marketing, a little bit in a crypto and investment
-- 🌱 I’m currently learning data analysys and python3 (since 2021), before that, she worked in marketing departments and was involved in website optimization and promotion (2016-2021).
-- 💞️ I’m looking to collaborate on data analysis projects
-- 📫 How to reach me portfolio.fofanova@gmail.com, 
-- 😄 Pronouns: she
-- ⚡ Fun fact: I like yoga, mountains chill(not radio) and vocal performance gives you goosebumps
+👋 Hi, I’m @Nataliia-data-analyst
 
-<!---
-Nataliia-data-analyst/Nataliia-data-analyst is a ✨ special ✨ repository because its `README.md` (this file) appears on your GitHub profile.
-You can click the Preview link to take a look at your changes.
---->
+I’m a **data analysis expert** with a strong foundation in **web development, digital marketing, and optimization**. My journey began in marketing departments, where I honed my skills in website promotion and optimization (2016-2021). Since 2021, I’ve transitioned into **data analytics** and **Python3**, diving deep into uncovering valuable insights that help businesses make data-driven decisions.
+
+- 👀 **Interests:** Data analysis, digital marketing, crypto, and investment trends.
+- 🌱 **Skills:** Proficient in data analysis, Python3, and marketing strategies. I’m continuously learning and expanding my expertise.
+- 💼 **Experience:** 5+ years in marketing, website optimization, and now, a growing portfolio in data analytics.
+- 💞️ **Collaboration:** Open to working on impactful data analysis projects and collaborations.
+- 📫 **Contact me:** [portfolio.fofanova@gmail.com](mailto:portfolio.fofanova@gmail.com)
+- 😄 **Pronouns:** She/Her
+- ⚡ **Fun fact:** When I'm not crunching data, I enjoy yoga, mountain retreats, and singing performances that give goosebumps.
+
+Let’s transform your data into powerful business insights!
