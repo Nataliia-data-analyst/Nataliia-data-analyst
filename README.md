@@ -4,7 +4,7 @@ I’m a **data analysis expert** with a strong foundation in **web development, 
 
 - 👀 **Interests:** Data analysis, digital marketing, crypto, and investment trends.
 - 🌱 **Skills:** Proficient in data analysis, Python3, and marketing strategies. I’m continuously learning and expanding my expertise.
-- 💼 **Experience:** 8+ years in marketing, website optimization, and now, a growing portfolio in data analytics.
+- 💼 **Experience:** 8+ years in digital marketing, 12+ website optimization, and now, a growing portfolio in data analytics (+3years).
 - 💞️ **Collaboration:** Open to working on impactful data analysis projects and collaborations.
 - 📫 **Contact me:** [portfolio.fofanova@gmail.com](mailto:portfolio.fofanova@gmail.com)
 - 😄 **Pronouns:** She/Her
