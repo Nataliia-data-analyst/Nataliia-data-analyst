@@ -1,0 +1,277 @@
+# Task 1. Preparing Data for Building Reports in BI Systems
+
+Create a query to retrieve a table with information about events, users, and sessions from GA4. As a result of executing the query, we should get a table that includes the following fields:
+
+- **event_timestamp**: the date and time of the event (data type should be timestamp).
+- **user_pseudo_id**: anonymous user identifier in GA4.
+- **session_id**: session identifier for events in GA4.
+- **event_name**: name of the event.
+- **country**: the user's country.
+- **device_category**: the category of the user's device.
+- **source**: source of the website visit.
+- **medium**: medium of the website visit.
+- **campaign**: name of the website visit campaign.
+
+The table should only include data from the year 2021 and should include the following events:
+
+- Website session start
+- Product view
+- Adding a product to the cart
+- Checkout start
+- Adding delivery information
+- Adding payment information
+- Purchase
+
+#Solution to the task 1
+
+SELECT 
+    TIMESTAMP_MICROS(event_timestamp) AS event_timestamp,
+    user_pseudo_id, 
+-- Extracting session_id from event parameters using UNNEST
+    (SELECT ep.value.string_value 
+    FROM UNNEST(event_params) AS ep 
+    WHERE ep.key = 'ga_session_id') AS session_id,
+    event_name,
+    geo.country AS country,
+    device.category AS device_category,
+    traffic_source.source AS source,
+    traffic_source.medium AS medium,
+    traffic_source.name AS campaign 
+FROM 
+    `bigquery-public-data.ga4_obfuscated_sample_ecommerce.events_*` 
+WHERE 
+    _TABLE_SUFFIX BETWEEN '20210101' AND '20211231' -- Filtering data for the year 2021
+    AND event_name IN (
+        'session_start', 
+        'view_item', 
+        'add_to_cart', 
+        'begin_checkout', 
+        'add_shipping_info', 
+        'add_payment_info', 
+        'purchase'
+    )
+#Working code can be found at the link https://console.cloud.google.com/bigquery?sq=469228364022:0e97263ad030455b89776a65105ba09f
+
+
+
+# Task 2. Conversion Calculation by Date and Traffic Channels
+
+Create a query to retrieve a table with information about conversions from the start of a session to the purchase.
+
+The resulting table should include the following fields:
+
+- **event_date**: the date the session started, extracted from the field `event_timestamp`.
+- **source**: the source of the website visit.
+- **medium**: the medium of the website visit.
+- **campaign**: the name of the website visit campaign.
+- **user_sessions_count**: the number of unique sessions for unique users on a given date and for the corresponding traffic channel.
+- **visit_to_cart**: conversion from the session start to adding a product to the cart (on the corresponding date and for the corresponding traffic channel).
+- **visit_to_checkout**: conversion from the session start to attempting to place an order (on the corresponding date and for the corresponding traffic channel).
+- **visit_to_purchase**: conversion from the session start to the purchase (on the corresponding date and for the corresponding traffic channel).
+
+#Solution to the task 2
+
+-- Query to retrieve a table with conversion information
+WITH sessions_data AS (
+    SELECT
+        DATE(TIMESTAMP_MICROS(event_timestamp)) AS event_date,
+        user_pseudo_id,
+        (SELECT ep.value.int_value 
+         FROM UNNEST(event_params) AS ep 
+         WHERE ep.key = 'ga_session_id') AS session_id,
+        traffic_source.source AS source,
+        traffic_source.medium AS medium,
+        traffic_source.name AS campaign 
+    FROM 
+        `bigquery-public-data.ga4_obfuscated_sample_ecommerce.events_*` 
+    WHERE 
+        _TABLE_SUFFIX BETWEEN '20210101' AND '20211231' 
+        AND event_name = 'session_start'
+),
+conversion_data AS (
+    SELECT
+        DATE(TIMESTAMP_MICROS(event_timestamp)) AS event_date,
+        user_pseudo_id,
+        (SELECT ep.value.int_value 
+         FROM UNNEST(event_params) AS ep 
+         WHERE ep.key = 'ga_session_id') AS session_id,
+        event_name
+    FROM 
+        `bigquery-public-data.ga4_obfuscated_sample_ecommerce.events_*` 
+    WHERE 
+        _TABLE_SUFFIX BETWEEN '20210101' AND '20211231' 
+        AND event_name IN ('add_to_cart', 'begin_checkout', 'purchase')
+),
+combined_data AS (
+    SELECT
+        s.event_date,
+        s.source,
+        s.medium,
+        s.campaign,
+        s.user_pseudo_id,
+        s.session_id,
+        MAX(CASE WHEN c.event_name = 'add_to_cart' THEN 1 ELSE 0 END) AS add_to_cart_event,
+        MAX(CASE WHEN c.event_name = 'begin_checkout' THEN 1 ELSE 0 END) AS begin_checkout_event,
+        MAX(CASE WHEN c.event_name = 'purchase' THEN 1 ELSE 0 END) AS purchase_event
+    FROM 
+        sessions_data s
+    LEFT JOIN 
+        conversion_data c
+    ON 
+        s.user_pseudo_id = c.user_pseudo_id AND s.session_id = c.session_id AND s.event_date = c.event_date
+    GROUP BY 
+        s.event_date, s.source, s.medium, s.campaign, s.user_pseudo_id, s.session_id
+)
+SELECT
+    event_date,
+    source,
+    medium,
+    campaign,
+    COUNT(DISTINCT CONCAT(user_pseudo_id, session_id)) AS user_sessions_count,
+    ROUND(SUM(add_to_cart_event) / COUNT(DISTINCT CONCAT(user_pseudo_id, session_id)), 4) AS visit_to_cart,
+    ROUND(SUM(begin_checkout_event) / COUNT(DISTINCT CONCAT(user_pseudo_id, session_id)), 4) AS visit_to_checkout,
+    ROUND(SUM(purchase_event) / COUNT(DISTINCT CONCAT(user_pseudo_id, session_id)), 4) AS visit_to_purchase
+FROM 
+    combined_data
+GROUP BY 
+    event_date, source, medium, campaign
+ORDER BY 
+    event_date, source, medium, campaign;
+
+
+#Working code can be found at the link https://console.cloud.google.com/bigquery?sq=469228364022:91f37abbceef4cdc96c698e639ba796c
+
+# Task 3. Conversion Comparison Between Different Landing Pages
+
+To complete this task, you will need to extract the `page_path` (the path to the page without the domain address and without link parameters) from the `page_location` in the session start event.
+
+For each unique `page_path` at the start of the session, calculate the following metrics based on data from 2020:
+
+- Number of unique sessions for unique users
+- Number of purchases
+- Conversion rate from the session start to purchase
+
+#Solution to the task 3
+
+WITH sessions_data AS (
+    SELECT
+        user_pseudo_id,
+        (SELECT ep.value.int_value 
+         FROM UNNEST(event_params) AS ep 
+         WHERE ep.key = 'ga_session_id') AS session_id,
+        -- Отримуємо page_path з page_location
+        REGEXP_EXTRACT(
+            (SELECT value.string_value 
+             FROM UNNEST(event_params) AS ep 
+             WHERE ep.key = 'page_location'),
+            r'^https?://[^/]+(/[^?]*)'
+        ) AS page_path,
+        DATE(TIMESTAMP_MICROS(event_timestamp)) AS event_date
+    FROM 
+        `bigquery-public-data.ga4_obfuscated_sample_ecommerce.events_*` 
+    WHERE 
+        _TABLE_SUFFIX BETWEEN '20200101' AND '20201231' 
+        AND event_name = 'session_start'
+),
+purchase_data AS (
+    SELECT
+        user_pseudo_id,
+        (SELECT ep.value.int_value 
+         FROM UNNEST(event_params) AS ep 
+         WHERE ep.key = 'ga_session_id') AS session_id,
+        event_name
+    FROM 
+        `bigquery-public-data.ga4_obfuscated_sample_ecommerce.events_*` 
+    WHERE 
+        _TABLE_SUFFIX BETWEEN '20200101' AND '20201231' 
+        AND event_name = 'purchase'
+),
+combined_data AS (
+    SELECT
+        s.page_path,
+        s.user_pseudo_id,
+        s.session_id,
+        COUNT(DISTINCT CASE WHEN p.event_name = 'purchase' THEN CONCAT(s.user_pseudo_id, s.session_id) ELSE NULL END) AS purchase_count
+    FROM 
+        sessions_data s
+    LEFT JOIN 
+        purchase_data p
+    ON 
+        s.user_pseudo_id = p.user_pseudo_id 
+        AND s.session_id = p.session_id
+    GROUP BY 
+        s.page_path, s.user_pseudo_id, s.session_id
+),
+final_metrics AS (
+    SELECT
+        page_path,
+        COUNT(DISTINCT CONCAT(user_pseudo_id, session_id)) AS unique_sessions_count,
+        SUM(purchase_count) AS purchase_count,
+        ROUND(SUM(purchase_count) / COUNT(DISTINCT CONCAT(user_pseudo_id, session_id)), 4) AS session_to_purchase_conversion
+    FROM 
+        combined_data
+    GROUP BY 
+        page_path
+)
+SELECT 
+    page_path,
+    unique_sessions_count,
+    purchase_count,
+    session_to_purchase_conversion
+FROM 
+    final_metrics
+ORDER BY 
+    unique_sessions_count DESC;
+
+
+
+#Working code can be found at the link https://console.cloud.google.com/bigquery?sq=469228364022:3f9219e1a87d4e17a9ce659f7eb5ba4e
+
+# Task 4. Checking the Correlation Between User Engagement and Purchases
+
+For each unique session, determine:
+
+1. Whether the user was engaged during the session (if the value of the `session_engaged` parameter = '1').
+2. The total engagement time of the user during the session (sum of the `engagement_time_msec` parameter from each session event).
+3. Whether a purchase occurred during the session.
+
+Calculate the correlation coefficient values:
+
+- Between point 1 and point 3.
+- Between point 2 and point 3.
+
+#Solution to the task 4
+
+-- Query to retrieve information about each unique session
+WITH session_data AS (
+    SELECT
+        user_pseudo_id,
+        (SELECT ep.value.int_value 
+         FROM UNNEST(event_params) AS ep 
+         WHERE ep.key = 'ga_session_id') AS session_id,
+        -- Визначаємо, чи була сесія залученою (session_engaged = '1')
+        MAX(CASE WHEN (SELECT ep.value.string_value 
+                       FROM UNNEST(event_params) AS ep 
+                       WHERE ep.key = 'session_engaged') = '1' THEN 1 ELSE 0 END) AS session_engaged,
+        -- Рахуємо загальний час активності під час сесії (сума engagement_time_msec)
+        SUM(CASE WHEN ep.key = 'engagement_time_msec' THEN ep.value.int_value ELSE 0 END) AS total_engagement_time_msec,
+        -- Визначаємо, чи була покупка під час сесії
+        MAX(CASE WHEN event_name = 'purchase' THEN 1 ELSE 0 END) AS purchase_occurred
+    FROM 
+        `bigquery-public-data.ga4_obfuscated_sample_ecommerce.events_*` , UNNEST(event_params) AS ep
+    WHERE 
+        _TABLE_SUFFIX BETWEEN '20200101' AND '20201231' 
+    GROUP BY 
+        user_pseudo_id, session_id
+)
+SELECT 
+    session_engaged,
+    total_engagement_time_msec,
+    purchase_occurred
+FROM 
+    session_data;
+
+
+#Working code can be found at the link https://console.cloud.google.com/bigquery?sq=469228364022:99c1350959404fbb960c351d14f4827e
+
+
