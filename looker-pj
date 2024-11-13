@@ -1,0 +1,23 @@
+# Task 
+1. **Create a New Report in Google Looker Studio and Set Up the Data Source:**
+   - Select **PostgreSQL** as the data source.
+   - Connect to the database from the previous tasks.
+   - Choose the "custom query" option and use the query from the homework in Topic 3.
+
+2. **Create New Fields in the Report:**
+   - **Ad Spend Sum**
+   - **CPC**
+   - **CPM**
+   - **CTR**
+   - **ROMI**
+
+3. **Add Three Charts to the Dashboard:**
+   - A **combined chart** with the advertising date on the horizontal axis, and Ad Spend Sum and ROMI for each month on two vertical axes. The horizontal axis should be sorted from the oldest to the newest date.
+   - A **line chart** showing the number of active campaigns for each month of the advertising display.
+   - A **table with columns and heatmaps**, where the campaign name is set as the dimension, and the following metrics are used: total Ad Spend, CPC, CPM, CTR, ROMI.
+
+4. **Add Filters to the Report:**
+   - Filter by campaign name.
+   - Filter by advertising display date.
+
+#Solution to the task can be found at the link https://lookerstudio.google.com/reporting/739e0197-0cab-4a90-a42e-4ad8fc2104af
